@@ -30,13 +30,6 @@ func (s *BasicService) CreateClick(ctx context.Context, clicks []*model.Click) {
 	if err := s.repo.CreateClicksBatch(ctx, entities); err != nil {
 		s.log.Error("batch insert failed", zap.Error(err))
 	}
-
-	//err := s.repo.CreateClick(ctx, click.Entity())
-	//s.log.Info("got click", zap.Any("Click: ", click))
-	//if err != nil {
-	//	s.log.Error("failed to create click", zap.Error(err))
-	//	return err
-	//}
 }
 
 func (s *BasicService) GetStats(ctx context.Context, shortCode string) (*model.Statistics, error) {

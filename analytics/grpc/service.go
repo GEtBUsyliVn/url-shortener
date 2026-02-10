@@ -64,10 +64,6 @@ func (s *AnalyticsGrpcService) RecordClick(ctx context.Context, req *proto.Click
 	if !ok {
 		s.log.Error("clicks collector is full, dropping click event", zap.Any("click", click))
 	}
-	//if err := s.service.CreateClick(ctx, click); err != nil {
-	//	s.log.Error("failed to create click", zap.Error(err))
-	//	return nil, status.Errorf(codes.Internal, "failed to create click: %v", err)
-	//}
 	return &emptypb.Empty{}, nil
 }
 

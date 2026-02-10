@@ -23,7 +23,6 @@ func NewClicksCollector(svc *service.BasicService, logger *zap.Logger) *ClicksCo
 	}
 }
 
-// не блокируем хендлер, уважаем ctx (отменили запрос — не пушим)
 func (c *ClicksCollector) TryEnqueue(ctx context.Context, click *model.Click) bool {
 	select {
 	case <-ctx.Done():
@@ -36,7 +35,6 @@ func (c *ClicksCollector) TryEnqueue(ctx context.Context, click *model.Click) bo
 	}
 }
 
-// запускать 1 раз
 func (c *ClicksCollector) Start(ctx context.Context) {
 	c.log.Info("starting clicks collector")
 	const (
