@@ -1,0 +1,28 @@
+syntax = "proto3";
+import "google/protobuf/empty.proto";
+package main;
+option go_package = ".;proto";
+
+service CacheService {
+  rpc Get(CacheGetRequest) returns (CacheGetResponse);
+  rpc Set(CacheSetRequest) returns (google.protobuf.Empty);
+  rpc Delete(CacheDeleteRequest) returns (google.protobuf.Empty);
+}
+
+
+message CacheGetRequest {
+  string shortCode = 1;
+}
+
+message CacheGetResponse{
+  string url = 1;
+}
+
+message CacheSetRequest {
+  string shortCode = 1;
+  string url = 2;
+}
+
+message CacheDeleteRequest {
+  string shortCode = 1;
+}

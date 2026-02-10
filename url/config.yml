@@ -5,4 +5,4 @@ database:
   user: "postgres"
   password: "postgres"
 grpc:
-  port: "localhost:50051"
+  addr: "localhost:50051"

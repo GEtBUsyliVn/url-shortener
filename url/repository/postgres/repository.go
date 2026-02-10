@@ -2,15 +2,17 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 
+	"github.com/GEtBUsyliVn/url-shortener/url/repository"
 	"github.com/GEtBUsyliVn/url-shortener/url/repository/entity"
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 )
 
 type BasicRepository struct {
-	db *sqlx.DB
-	//log *.Logger
+	db  *sqlx.DB
 	log *zap.Logger
 }
 
@@ -34,10 +36,10 @@ func (r *BasicRepository) Get(ctx context.Context, shortCode string) (*entity.Ur
 		  WHERE short_code = $1`
 	var url entity.Url
 	err := r.db.GetContext(ctx, &url, q, shortCode)
-	if err != nil {
-		return nil, err
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, repository.ErrNotFound
 	}
-	return &url, nil
+	return &url, err
 }
 
 func (r *BasicRepository) Delete(ctx context.Context, shortCode string) error {

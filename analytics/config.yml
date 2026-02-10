@@ -1,0 +1,2 @@
+grpc:
+  address: "localhost:50055"

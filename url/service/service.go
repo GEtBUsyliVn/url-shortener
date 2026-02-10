@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/GEtBUsyliVn/url-shortener/url/model"
@@ -37,4 +38,15 @@ func (s *Service) CreateShortURL(ctx context.Context, url *model.Url) (string, e
 		return "", fmt.Errorf("failed to create url: %w", err)
 	}
 	return code, nil
+}
+
+func (s *Service) GetShortUrl(ctx context.Context, shortUrl string) (string, error) {
+	entity, err := s.repo.Get(ctx, shortUrl)
+	if errors.Is(err, repository.ErrNotFound) {
+		return "", ErrNotFound
+	}
+	if err != nil {
+		return "", fmt.Errorf("failed to get url: %w", err)
+	}
+	return entity.OriginalUrl, nil
 }

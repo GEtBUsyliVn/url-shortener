@@ -14,5 +14,5 @@ type DataBaseConfig struct {
 }
 
 type GrpcConfig struct {
-	Port string `yaml:"port"`
+	Addr string `yaml:"addr"`
 }

@@ -7,7 +7,7 @@ import (
 
 	"github.com/GEtBUsyliVn/url-shortener/url/config"
 	"github.com/GEtBUsyliVn/url-shortener/url/model"
-	proto2 "github.com/GEtBUsyliVn/url-shortener/url/pkg/api/grpc/proto"
+	protoS "github.com/GEtBUsyliVn/url-shortener/url/pkg/api/grpc/proto"
 	"github.com/GEtBUsyliVn/url-shortener/url/service"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -19,41 +19,41 @@ type Service struct {
 	log        *zap.Logger
 	grpcServer *grpc.Server
 	urlService *service.Service
-	proto2.UnimplementedURLServiceServer
+	protoS.UnimplementedURLServiceServer
 	listener net.Listener
 }
 
 func NewGrpcService(log *zap.Logger, urlService *service.Service) *Service {
 	return &Service{
-		log:        log.Named("grpc "),
+		log:        log.Named("grpc url"),
 		urlService: urlService,
 		grpcServer: grpc.NewServer(),
 	}
 }
 
 func (s *Service) Init(cfg config.GrpcConfig) error {
-	listener, err := net.Listen("tcp", cfg.Port)
+	listener, err := net.Listen("tcp", cfg.Addr)
 	if err != nil {
 		return fmt.Errorf("unable to listen port %w", err)
 	}
 	s.listener = listener
 
-	proto2.RegisterURLServiceServer(s.grpcServer, s)
+	protoS.RegisterURLServiceServer(s.grpcServer, s)
 
 	go func() {
-		s.log.Debug("grpc serve", zap.String("address", cfg.Port))
+		s.log.Debug("grpc serve", zap.String("address", cfg.Addr))
 
 		if servErr := s.grpcServer.Serve(s.listener); servErr != nil {
 			s.log.Panic("unable to serve", zap.Error(servErr))
 		}
 	}()
 
-	s.log.Info("server started", zap.String("addr", cfg.Port))
+	s.log.Info("server started", zap.String("addr", cfg.Addr))
 
 	return nil
 }
 
-func (s *Service) CreateShortURL(ctx context.Context, req *proto2.CreateURLRequest) (*proto2.CreateURLResponse, error) {
+func (s *Service) CreateShortURL(ctx context.Context, req *protoS.CreateURLRequest) (*protoS.CreateURLResponse, error) {
 	url := &model.Url{}
 	err := url.BindProtoRequest(req)
 	if err != nil {
@@ -64,7 +64,7 @@ func (s *Service) CreateShortURL(ctx context.Context, req *proto2.CreateURLReque
 		return nil, status.Errorf(codes.Internal, "create short url: %v", err)
 	}
 
-	return &proto2.CreateURLResponse{ShortCode: res}, nil
+	return &protoS.CreateURLResponse{ShortCode: res}, nil
 }
 
 func (s *Service) Shutdown() {

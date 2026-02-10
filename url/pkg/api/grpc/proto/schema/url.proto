@@ -3,9 +3,6 @@ import "google/protobuf/timestamp.proto";
 package main;
 
 
-option go_package = "github.com/GEtBUsyliVn/url-shortener";
-
-
 service URLService {
   rpc CreateShortURL(CreateURLRequest) returns (CreateURLResponse);
   rpc GetOriginalURL(GetURLRequest) returns (GetURLResponse);

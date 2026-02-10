@@ -7,7 +7,6 @@ import (
 )
 
 type Storage interface {
-	// CreateUrl Atomic(ctx context.Context, fn func(r Repository) error) (err error)
 	Create(ctx context.Context, url *entity.Url) error
 	Get(ctx context.Context, shortCode string) (*entity.Url, error)
 	Delete(ctx context.Context, shortCode string) error
