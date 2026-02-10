@@ -10,7 +10,6 @@ import (
 	"github.com/GEtBUsyliVn/url-shortener/cache/repository/memory"
 	redisS "github.com/GEtBUsyliVn/url-shortener/cache/repository/redis"
 	"github.com/GEtBUsyliVn/url-shortener/cache/service"
-	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
@@ -44,10 +43,7 @@ func main() {
 		panic(err)
 	}
 	defer grpcService.Shutdown()
-	router := gin.Default()
-	router.POST("/url", func(c *gin.Context) {})
 	fmt.Println("server started")
 	defer redisStorage.GetClient().Close()
-	router.Run()
 
 }

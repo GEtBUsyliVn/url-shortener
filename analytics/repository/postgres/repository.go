@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/GEtBUsyliVn/url-shortener/analytics/repository"
 	"github.com/GEtBUsyliVn/url-shortener/analytics/repository/entity"
@@ -27,6 +29,7 @@ func (r *BasicRepository) CreateClick(ctx context.Context, click *entity.Click) 
 	q := `INSERT INTO clicks (short_code,clicked_at, ip_address, user_agent, referer, country )
 		  VALUES (:short_code,:clicked_at, :ip_address, :user_agent, :referer, :country)`
 	_, err := r.db.NamedExecContext(ctx, q, click)
+	r.log.Info("storage error", zap.Error(err))
 	return err
 }
 
@@ -62,4 +65,71 @@ func (r *BasicRepository) GetStatistics(ctx context.Context, shortCode string) (
 		return nil, repository.ErrNotFound
 	}
 	return &stats, nil
+}
+
+func (r *BasicRepository) GetUniqClicks(ctx context.Context) ([]*entity.Click, error) {
+	q := `SELECT DISTINCT ON(short_code) id,short_code, clicked_at, ip_address, user_agent, referer, country
+		FROM clicks`
+	var click []*entity.Click
+	err := r.db.SelectContext(ctx, &click, q)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			r.log.Info("no clicks found for aggregation")
+			return nil, nil
+		}
+		r.log.Error("failed to get unique clicks", zap.Error(err))
+		return nil, err
+	}
+	return click, nil
+}
+
+func (r *BasicRepository) CreateClicksBatch(ctx context.Context, clicks []*entity.Click) error {
+	if len(clicks) == 0 {
+		return nil
+	}
+
+	var (
+		sb   strings.Builder
+		args = make([]any, 0, len(clicks)*4)
+	)
+
+	sb.WriteString(
+		`
+		INSERT INTO clicks (short_code, clicked_at, ip_address, user_agent,referer,country)
+		VALUES`)
+
+	argPos := 1
+
+	for i, c := range clicks {
+		if i > 0 {
+			sb.WriteString(",")
+		}
+
+		sb.WriteString(fmt.Sprintf(
+			"($%d,$%d,$%d,$%d,$%d,$%d)",
+			argPos,
+			argPos+1,
+			argPos+2,
+			argPos+3,
+			argPos+4,
+			argPos+5,
+		))
+
+		args = append(
+			args,
+			c.ShortCode,
+			c.LastClickedAt,
+			c.IP,
+			c.UserAgent,
+			c.Referer,
+			c.Country,
+		)
+
+		argPos += 4
+	}
+
+	query := sb.String()
+
+	_, err := r.db.ExecContext(ctx, query, args...)
+	return err
 }

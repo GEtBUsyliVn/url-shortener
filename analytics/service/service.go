@@ -6,6 +6,7 @@ import (
 
 	"github.com/GEtBUsyliVn/url-shortener/analytics/model"
 	"github.com/GEtBUsyliVn/url-shortener/analytics/repository"
+	"github.com/GEtBUsyliVn/url-shortener/analytics/repository/entity"
 	"go.uber.org/zap"
 )
 
@@ -21,13 +22,21 @@ func NewStatsService(repo repository.Repository, log *zap.Logger) *BasicService 
 	}
 }
 
-func (s *BasicService) CreateClick(ctx context.Context, click *model.Click) error {
-	err := s.repo.CreateClick(ctx, click.Entity())
-	if err != nil {
-		s.log.Error("failed to create click", zap.Error(err))
-		return err
+func (s *BasicService) CreateClick(ctx context.Context, clicks []*model.Click) {
+	entities := make([]*entity.Click, 0)
+	for _, click := range clicks {
+		entities = append(entities, click.Entity())
 	}
-	return nil
+	if err := s.repo.CreateClicksBatch(ctx, entities); err != nil {
+		s.log.Error("batch insert failed", zap.Error(err))
+	}
+
+	//err := s.repo.CreateClick(ctx, click.Entity())
+	//s.log.Info("got click", zap.Any("Click: ", click))
+	//if err != nil {
+	//	s.log.Error("failed to create click", zap.Error(err))
+	//	return err
+	//}
 }
 
 func (s *BasicService) GetStats(ctx context.Context, shortCode string) (*model.Statistics, error) {

@@ -3,7 +3,9 @@ package model
 import (
 	"time"
 
+	"github.com/GEtBUsyliVn/url-shortener/analytics/pkg/api/grpc/proto"
 	"github.com/GEtBUsyliVn/url-shortener/analytics/repository/entity"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type Statistics struct {
@@ -20,4 +22,13 @@ func (s *Statistics) Bind(entity *entity.Statistics) {
 	s.UniqVisitors = entity.UniqVisitors
 	s.LastClickedAt = entity.LastClickedAt
 	s.UpdatedAt = entity.UpdatedAt
+}
+
+func (s *Statistics) BindProtoResponse() *proto.StatsResponse {
+	return &proto.StatsResponse{
+		ShortCode:      s.ShortCode,
+		TotalClicks:    int64(s.TotalClicks),
+		UniqueVisitors: int64(s.UniqVisitors),
+		ClickedAt:      timestamppb.New(s.LastClickedAt),
+	}
 }
