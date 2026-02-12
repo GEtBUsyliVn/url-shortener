@@ -1,3 +1,0 @@
-grpc:
-  shortener_addr: "localhost:50051"
-  cache_addr: "localhost:50052"

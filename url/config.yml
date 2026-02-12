@@ -1,8 +1,0 @@
-database:
-  host: "localhost"
-  port: 5432
-  database: "url"
-  user: "postgres"
-  password: "postgres"
-grpc:
-  addr: "localhost:50051"

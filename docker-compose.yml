@@ -1,0 +1,165 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres        # имя пользователя
+      POSTGRES_PASSWORD: postgres    # пароль
+      POSTGRES_DB: url       # имя создаваемой БД
+    ports:
+      - "5432:5432"                  # пробрасываем порт
+    volumes:
+      - postgres_data:/var/lib/postgresql/data  # сохраняем данные при перезапуске
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d url" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - app-network
+
+
+  url-migrations:
+    image: migrate/migrate:v4.16.2
+    volumes:
+      - ./services/migrations:/migrations
+    entrypoint: [ "/bin/sh", "-c" ]
+    command:
+      - |
+        set -e
+        echo "Running URL service migrations..."
+        migrate -path /migrations -database "postgres://postgres:postgres@postgres:5432/url?sslmode=disable" up
+        echo "URL migrations completed!"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  analytics-migrations:
+    image: migrate/migrate:v4.16.2
+    volumes:
+      - ./services/migrations:/migrations
+    entrypoint: [ "/bin/sh", "-c" ]
+    command:
+      - |
+        echo "Running Analytics service migrations..."
+        migrate -path /migrations -database "postgres://postgres:postgres@postgres:5432/url?sslmode=disable" up
+        echo "Analytics migrations completed!"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      url-migrations:
+        condition: service_completed_successfully
+    networks:
+      - app-network
+
+  analytics-service:
+    build:
+      context: .
+      dockerfile: services/analytics-service/deploy/Dockerfile
+    ports:
+      - "50051:50051"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DATABASE=url
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - ANALYTICS_GRPC_ADDR=analytics-service:50051
+      - AGGREGATOR_WORKER_INTERVAL=1m
+    depends_on:
+      url-migrations:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - app-network
+
+  cache-service:
+    build:
+      context: .
+      dockerfile: services/cache-service/deploy/Dockerfile
+    ports:
+      - "50053:50053"
+    environment:
+      - CACHE_GRPC_ADDR=cache-service:50053
+      - WORKER_CLEANUP_INTERVAL=1m
+      - MEMORY_CACHE_TTL=15m
+      - REDIS_ADDR=redis:6379
+      - REDIS_PASSWORD=""
+      - REDIS_DB=0
+      - REDIS_CACHE_TTL=30m
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - app-network
+
+  url-service:
+    build:
+      context: .
+      dockerfile: services/url-service/deploy/Dockerfile
+    ports:
+      - "50054:50054"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DATABASE=url
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - URL_SERVICE_GRPC_ADDR=url-service:50054
+      - URL_WORKER_INTERVAL=1h
+    depends_on:
+      url-migrations:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - app-network
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: services/api-gateway/deploy/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - GRPC_URL_ADDR=url-service:50054
+      - GRPC_CACHE_ADDR=cache-service:50053
+      - GRPC_ANALYTICS_ADDR=analytics-service:50051
+    depends_on:
+      - url-service
+      - analytics-service
+      - cache-service
+    restart: on-failure
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+
+
